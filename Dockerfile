@@ -17,19 +17,19 @@ VOLUME /app/var/
 # persistent / runtime deps
 # hadolint ignore=DL3008
 RUN set -eux; \
-	apt-get update; \
-	apt-get install -y --no-install-recommends \
-		file \
-		git \
-	; \
-	rm -rf /var/lib/apt/lists/*; \
-	install-php-extensions \
-		@composer \
-		apcu \
-		intl \
-		opcache \
-		zip \
-	;
+    apt-get update; \
+    apt-get install -y --no-install-recommends \
+       file \
+       git \
+    ; \
+    rm -rf /var/lib/apt/lists/*; \
+    install-php-extensions \
+       @composer \
+       apcu \
+       intl \
+       opcache \
+       zip \
+    ;
 
 # https://getcomposer.org/doc/03-cli.md#composer-allow-superuser
 ENV COMPOSER_ALLOW_SUPERUSER=1
@@ -37,6 +37,9 @@ ENV COMPOSER_ALLOW_SUPERUSER=1
 ENV PHP_INI_SCAN_DIR=":$PHP_INI_DIR/app.conf.d"
 
 ###> recipes ###
+###> doctrine/doctrine-bundle ###
+RUN install-php-extensions pdo_mysql
+###< doctrine/doctrine-bundle ###
 ###< recipes ###
 
 COPY --link frankenphp/conf.d/10-app.ini $PHP_INI_DIR/app.conf.d/
@@ -58,9 +61,9 @@ ENV FRANKENPHP_WORKER_CONFIG=watch
 RUN mv "$PHP_INI_DIR/php.ini-development" "$PHP_INI_DIR/php.ini"
 
 RUN set -eux; \
-	install-php-extensions \
-		xdebug \
-	;
+    install-php-extensions \
+       xdebug \
+    ;
 
 COPY --link frankenphp/conf.d/20-app.dev.ini $PHP_INI_DIR/app.conf.d/
 
@@ -78,17 +81,19 @@ COPY --link frankenphp/conf.d/20-app.prod.ini $PHP_INI_DIR/app.conf.d/
 # prevent the reinstallation of vendors at every changes in the source code
 COPY --link composer.* symfony.* ./
 RUN set -eux; \
-	composer install --no-cache --prefer-dist --no-dev --no-autoloader --no-scripts --no-progress
+    composer install --no-cache --prefer-dist --no-dev --no-autoloader --no-scripts --no-progress
 
 # copy sources
 COPY --link --exclude=frankenphp/ . ./
 
+# pdo_mysql už je v base stage, nemusíš instalovat znovu
+
 RUN set -eux; \
-	mkdir -p var/cache var/log var/share; \
-	composer dump-autoload --classmap-authoritative --no-dev; \
-	composer dump-env prod; \
-	composer run-script --no-dev post-install-cmd; \
-	if [ -f importmap.php ]; then \
-		php bin/console asset-map:compile; \
-	fi; \
-	chmod +x bin/console; sync;
+    mkdir -p var/cache var/log var/share; \
+    composer dump-autoload --classmap-authoritative --no-dev; \
+    composer dump-env prod; \
+    composer run-script --no-dev post-install-cmd; \
+    if [ -f importmap.php ]; then \
+       php bin/console asset-map:compile; \
+    fi; \
+    chmod +x bin/console; sync;
