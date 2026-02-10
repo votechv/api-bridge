@@ -18,4 +18,3 @@
 /.phpunit.cache/
 ###< phpunit/phpunit ###
 .idea
-.env
